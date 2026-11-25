@@ -201,7 +201,7 @@ let actx=null;
 function beep(){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); [0,.35,.7].forEach(d=>{ const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=880; o.connect(g); g.connect(actx.destination); const t=actx.currentTime+d; g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.4,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+.3); o.start(t); o.stop(t+.32); }); }catch(e){} }
 
 // background music: soft generated loop (no file needed), plays only while the timer runs
-const MUS_LV=[['High',2.0],['Medium',0.9],['Off',0]]; let musLv=store.get('muslv',0); if(!(musLv>=0&&musLv<3)) musLv=0; let musicOn=MUS_LV[musLv][1]>0, mus=null;
+const MUS_LV=[['High',1.6],['Medium',0.8],['Off',0]]; let musLv=store.get('muslv',0); if(!(musLv>=0&&musLv<3)) musLv=0; let musicOn=MUS_LV[musLv][1]>0, mus=null;
 const CHORDS=[[57,60,64],[53,57,60],[48,52,55],[55,59,62]]; // Am F C G
 const hz=n=>440*Math.pow(2,(n-69)/12);
 function musStart(){

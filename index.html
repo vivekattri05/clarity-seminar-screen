@@ -65,6 +65,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .dock .sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
 button,.btn{font:600 13px/1 var(--f-body);color:var(--ink);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer}
 button:hover{background:rgba(255,255,255,.12)}
+.resbtn{display:inline-flex;align-items:center;padding:8px 14px;border-radius:10px;background:var(--pink);color:#fff;font:600 14px/1 var(--f-body);text-decoration:none;border:1px solid var(--pink)}.resbtn:hover{filter:brightness(1.1)}
 button.on{background:var(--blue);border-color:var(--blue)}
 button.go{background:linear-gradient(90deg,var(--blue),var(--cyan));border-color:transparent}
 button:focus-visible,input:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
@@ -112,6 +113,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--ice);outline-of
   </div>
   <div class="sep"></div>
   <div class="grp">
+    <a id="b-result" class="resbtn" href="https://docs.google.com/spreadsheets/d/1HnSF8VwCxqbVpGtMDqCDHhK7tNkbgt-c4bEqwC2Ptao/edit#gid=261058711" target="_blank" rel="noopener">🏆 Result</a>
     <button type="button" id="b-music">♪ Music: High</button>
     <button type="button" id="b-full">⛶ Full screen</button>
     <button type="button" id="b-set">⚙ Links</button>

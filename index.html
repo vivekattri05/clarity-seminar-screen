@@ -123,7 +123,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--ice);outline-of
     <h2>QR links</h2>
     <p>Paste each form's link here (from the "Links" tab of the results sheet). The big QR on screen is made from it. Links are remembered in this computer's browser.</p>
     <div id="slotform"></div>
-    <div class="slot"><label for="pay-img">Payment QR image</label><input type="file" id="pay-img" accept="image/*"><span class="hint">The company account's QR image. Shown on the "Payment" button.</span></div>
     <div class="slot"><label for="custom-min">Timer (minutes)</label><input type="number" id="custom-min" min="1" max="180" value="20"><span class="hint">Default test time. The 5/10/15/20/25 buttons work too.</span></div>
     <div class="row"><button type="button" id="b-close" class="go">Done</button></div>
   </div>
@@ -136,13 +135,12 @@ const SLOTS=[
   {k:'test',name:'Test',label:'Scan to start the Clarity Test',sub:'20 questions · 20 minutes · use the name and mobile number you registered with'},
   {k:'prac',name:'Practical',label:'Scan to submit your practical',sub:'Text, ad copy, or a link to your image or landing page'},
   {k:'intent',name:'Intent',label:'Scan for the Seat Interest Form',sub:'Want to join the course? It takes 1 minute'},
-  {k:'feed',name:'Feedback',label:'Scan to share your feedback',sub:'1 minute · your feedback makes the next seminar better'},
-  {k:'pay',name:'Payment',label:'Lock your seat · Advance booking ₹1,180',sub:'Scan to pay, then show the screenshot at the desk'}
+  {k:'feed',name:'Feedback',label:'Scan to share your feedback',sub:'1 minute · your feedback makes the next seminar better'}
 ];
 const MODES=[['timer','Timer'],['qr','QR'],['both','Timer + QR']];
 const $=id=>document.getElementById(id);
 const store={get(k,d){try{const v=localStorage.getItem('hsim-screen-'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem('hsim-screen-'+k,JSON.stringify(v));}catch(e){}}};
-let mode=store.get('mode','both'), slot=store.get('slot','test'), links=Object.assign({},DEFAULT_LINKS,Object.fromEntries(Object.entries(store.get('links',{})).filter(([k,v])=>v))), payImg=store.get('payimg',null);
+let mode=store.get('mode','both'), slot=store.get('slot','test'); if(!SLOTS.some(x=>x.k===slot)) slot='test'; let links=Object.assign({},DEFAULT_LINKS,Object.fromEntries(Object.entries(store.get('links',{})).filter(([k,v])=>v)));
 let total=store.get('min',20)*60, left=total, running=false, endAt=0, tick=null, beeped=false;
 
 function fmt(s){ const neg=s<0; s=Math.abs(Math.round(s)); const m=Math.floor(s/60), x=s%60; return (neg?'+':'')+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0'); }
@@ -167,14 +165,12 @@ function qrLocked(st){
 function qrEl(){
   const s=SLOTS.find(x=>x.k===slot); const w=document.createElement('div'); w.className='qr';
   const link=(links[slot]||'').trim();
-  if(slot==='pay' && payImg){
-    const box=document.createElement('div'); box.className='qrbox'; const im=document.createElement('img'); im.src=payImg; im.alt='Payment QR'; box.append(im); w.append(box);
-  } else if(/^https?:\/\//i.test(link) && window.QRCode){
+  if(/^https?:\/\//i.test(link) && window.QRCode){
     const box=document.createElement('div'); box.className='qrbox'; const holder=document.createElement('div'); holder.className='qrc'; box.append(holder); w.append(box);
     new QRCode(holder,{text:link,width:720,height:720,colorDark:'#0A2747',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
     const u=document.createElement('div'); u.className='qrurl'; u.textContent=link.replace(/^https?:\/\//,''); w.append(u);
   } else {
-    const e=document.createElement('div'); e.className='empty'; e.textContent = slot==='pay' ? 'No payment QR image yet. Upload it under "⚙ Links".' : (window.QRCode ? 'No '+s.name+' link yet. Paste it under "⚙ Links".' : 'The QR tool did not load. Check the internet and reopen the page.'); w.append(e);
+    const e=document.createElement('div'); e.className='empty'; e.textContent = (window.QRCode ? 'No '+s.name+' link yet. Paste it under "⚙ Links".' : 'The QR tool did not load. Check the internet and reopen the page.'); w.append(e);
   }
   const l=document.createElement('div'); l.className='qrlabel'; l.textContent=s.label; const sb=document.createElement('div'); sb.className='sub'; sb.textContent=s.sub;
   w.prepend(l); w.append(sb);
@@ -244,14 +240,13 @@ $('b-plus').onclick=()=>{ if(running){ endAt+=60000; } else { left+=60; } total=
 $('b-full').onclick=()=>{ const d=document.documentElement; if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); else if(d.requestFullscreen) d.requestFullscreen().catch(()=>{}); };
 // settings
 const sf=$('slotform');
-SLOTS.filter(s=>s.k!=='pay').concat([SLOTS.find(s=>s.k==='pay')]).forEach(s=>{
+SLOTS.forEach(s=>{
   const d=document.createElement('div'); d.className='slot';
-  const l=document.createElement('label'); l.htmlFor='ln-'+s.k; l.textContent=s.name+(s.k==='pay'?' link (optional)':' link');
+  const l=document.createElement('label'); l.htmlFor='ln-'+s.k; l.textContent=s.name+' link';
   const i=document.createElement('input'); i.type='url'; i.id='ln-'+s.k; i.placeholder='https://forms.gle/…'; i.value=links[s.k]||'';
   i.oninput=()=>{ links[s.k]=i.value.trim(); store.set('links',links); };
   d.append(l,i); sf.append(d);
 });
-$('pay-img').onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ payImg=r.result; store.set('payimg',payImg); render(); }; r.readAsDataURL(f); };
 $('custom-min').value=Math.round(total/60);
 $('custom-min').onchange=e=>{ const n=parseInt(e.target.value,10); if(n>0&&n<=180) setMin(n); };
 $('b-set').onclick=()=>{ $('sheet').hidden=false; };

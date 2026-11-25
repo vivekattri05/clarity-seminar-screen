@@ -52,6 +52,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .qrlabel{font:700 clamp(18px,2.6vw,40px)/1.15 var(--f-head);text-align:center}
 .qrurl{font:600 clamp(12px,1.4vw,20px)/1 var(--f-num);letter-spacing:.06em;color:var(--ice);text-align:center;word-break:break-all}
 .qrc canvas{display:block!important}.qrc img{display:none!important}
+.qrwait{width:min(48vh,34vw);aspect-ratio:1;border:3px dashed rgba(127,219,255,.45);border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;text-align:center;padding:3vh}
+.qrwait i{font:800 clamp(44px,9vh,120px)/1 var(--f-head);color:var(--ice);font-style:normal}
+.qrwait b{font:700 clamp(18px,2.4vw,34px)/1.2 var(--f-head)}
+.qrwait span{font:500 clamp(13px,1.5vw,22px)/1.35 var(--f-body);color:var(--mut)}
+.qrwait.closed{border-color:rgba(230,35,138,.6)}.qrwait.closed i{color:var(--pink)}
 .empty{border:2px dashed var(--line);border-radius:24px;padding:6vh 4vw;text-align:center;color:var(--mut);max-width:560px}
 /* dock */
 .dock{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;background:rgba(11,28,53,.92);border:1px solid var(--line);border-radius:16px;padding:8px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:opacity .4s,transform .4s;z-index:20;max-width:calc(100vw - 32px)}
@@ -107,6 +112,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--ice);outline-of
   </div>
   <div class="sep"></div>
   <div class="grp">
+    <button type="button" id="b-music">♪ Music on</button>
     <button type="button" id="b-full">⛶ Full screen</button>
     <button type="button" id="b-set">⚙ Links</button>
   </div>
@@ -147,6 +153,17 @@ function timerEl(){
   const c=document.createElement('div'); c.className='clock'; const b=document.createElement('b'); b.id='clock'; const sm=document.createElement('small'); sm.id='clockLabel'; const inner=document.createElement('div'); inner.append(b,sm); c.append(inner); r.append(c); w.append(r);
   return w;
 }
+function qrState(){ const now=running?(endAt-Date.now())/1000:left; if(now<=0) return 'closed'; if(!running && now>=total) return 'wait'; return 'open'; }
+let lastQr=null;
+function qrLocked(st){
+  const s=SLOTS.find(x=>x.k===slot); const w=document.createElement('div'); w.className='qr';
+  const l=document.createElement('div'); l.className='qrlabel'; l.textContent = st==='wait' ? s.label.replace(/^Scan to /,'Get ready to ') : 'Time is up';
+  const box=document.createElement('div'); box.className='qrwait'+(st==='closed'?' closed':'');
+  const i=document.createElement('i'); i.textContent = st==='wait' ? '⏳' : '■';
+  const b=document.createElement('b'); b.textContent = st==='wait' ? 'The QR code appears when the timer starts' : 'This QR is now closed';
+  const sp=document.createElement('span'); sp.textContent = st==='wait' ? 'Keep your phone camera ready' : 'Submit now if you have not already';
+  box.append(i,b,sp); w.append(l,box); return w;
+}
 function qrEl(){
   const s=SLOTS.find(x=>x.k===slot); const w=document.createElement('div'); w.className='qr';
   const link=(links[slot]||'').trim();
@@ -167,23 +184,53 @@ function render(){
   const m=$('main'); m.textContent='';
   if(mode==='timer'){ const t=timerEl(); const h=document.createElement('div'); h.style.textAlign='center'; const hl=document.createElement('div'); hl.className='headline'; hl.textContent=slot==='test'?'Clarity Test':'Time'; t.prepend(hl); m.append(t); }
   else if(mode==='qr'){ m.append(qrEl()); }
-  else { const g=document.createElement('div'); g.className='both'; g.append(timerEl(), qrEl()); m.append(g); }
+  else { lastQr=qrState(); const g=document.createElement('div'); g.className='both'; g.append(timerEl(), lastQr==='open'?qrEl():qrLocked(lastQr)); m.append(g); }
   $('modes').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   $('slots').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.k===slot));
   paint();
 }
 function paint(){
   const now=running?(endAt-Date.now())/1000:left;
-  const c=$('clock'); if(!c) return;
+  if(mode==='both' && lastQr!==null && qrState()!==lastQr){ render(); return; }
+  const c=$('clock'); if(!c){ musSync(); return; }
   c.textContent=fmt(Math.ceil(now));
   $('clockLabel').textContent = now<=0 ? 'TIME UP' : running ? 'REMAINING' : (now===total?'READY':'PAUSED');
   const frac=Math.max(0,Math.min(1,now/total)); $('arc').setAttribute('stroke-dashoffset',(1131*(1-frac)).toFixed(1));
   const t=$('timer'); t.classList.toggle('warn',now>0&&now<=60); t.classList.toggle('over',now<=0);
   if(now<=0 && running && !beeped){ beeped=true; beep(); }
   $('b-start').textContent = running ? '❚❚ Pause' : '▶ Start';
+  musSync();
 }
 let actx=null;
 function beep(){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); [0,.35,.7].forEach(d=>{ const o=actx.createOscillator(), g=actx.createGain(); o.frequency.value=880; o.connect(g); g.connect(actx.destination); const t=actx.currentTime+d; g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.4,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+.3); o.start(t); o.stop(t+.32); }); }catch(e){} }
+
+// background music: soft generated loop (no file needed), plays only while the timer runs
+let musicOn=store.get('music',true), mus=null;
+const CHORDS=[[57,60,64],[53,57,60],[48,52,55],[55,59,62]]; // Am F C G
+const hz=n=>440*Math.pow(2,(n-69)/12);
+function musStart(){
+  if(!musicOn||mus) return;
+  try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); }catch(e){ return; }
+  const master=actx.createGain(); master.gain.setValueAtTime(0.0001,actx.currentTime); master.gain.exponentialRampToValueAtTime(0.22,actx.currentTime+2);
+  const lp=actx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1800; master.connect(lp); lp.connect(actx.destination);
+  mus={master,step:0,next:actx.currentTime+0.1,timer:null};
+  const BAR=4.8, STEP=BAR/8;
+  function note(f,t,dur,vol,type){ const o=actx.createOscillator(), g=actx.createGain(); o.type=type; o.frequency.value=f; o.connect(g); g.connect(master); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+Math.min(0.8,dur/3)); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.start(t); o.stop(t+dur+0.05); }
+  function sched(){
+    while(mus && mus.next < actx.currentTime+1.2){
+      const t=mus.next, i=mus.step, ch=CHORDS[Math.floor(i/8)%4];
+      if(i%8===0){ ch.forEach(n=>{ note(hz(n),t,BAR+0.6,0.10,'sine'); note(hz(n)*1.003,t,BAR+0.6,0.05,'triangle'); }); note(hz(ch[0]-12),t,BAR,0.12,'sine'); }
+      const arp=[0,1,2,1,0,2,1,2][i%8]; note(hz(ch[arp]+12),t,0.9,0.045,'triangle');
+      mus.step++; mus.next+=STEP;
+    }
+  }
+  sched(); mus.timer=setInterval(sched,200);
+}
+function musStop(){
+  if(!mus) return; const m=mus; mus=null; clearInterval(m.timer);
+  try{ const t=actx.currentTime; m.master.gain.cancelScheduledValues(t); m.master.gain.setValueAtTime(Math.max(m.master.gain.value,0.0001),t); m.master.gain.exponentialRampToValueAtTime(0.0001,t+1.2); setTimeout(()=>{ try{m.master.disconnect();}catch(e){} },1500); }catch(e){}
+}
+function musSync(){ const now=running?(endAt-Date.now())/1000:left; if(musicOn && running && now>0) musStart(); else musStop(); const b=$('b-music'); if(b){ b.textContent=musicOn?'♪ Music on':'♪ Music off'; b.classList.toggle('on',musicOn); } }
 function start(){ if(running){ left=(endAt-Date.now())/1000; running=false; clearInterval(tick); } else { try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} endAt=Date.now()+left*1000; running=true; beeped=left<=0; clearInterval(tick); tick=setInterval(paint,250); } paint(); }
 function reset(){ running=false; clearInterval(tick); left=total; beeped=false; paint(); }
 function setMin(n){ total=n*60; store.set('min',n); reset(); }
@@ -192,7 +239,7 @@ function setMin(n){ total=n*60; store.set('min',n); reset(); }
 MODES.forEach(([k,t])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=t; b.dataset.m=k; b.onclick=()=>{mode=k; store.set('mode',k); render();}; $('modes').append(b); });
 SLOTS.forEach(s=>{ const b=document.createElement('button'); b.type='button'; b.textContent=s.name; b.dataset.k=s.k; b.onclick=()=>{slot=s.k; store.set('slot',s.k); if(mode==='timer'){mode='both';} render();}; $('slots').append(b); });
 [5,10,15,20,25].forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n+'m'; b.onclick=()=>setMin(n); $('presets').append(b); });
-$('b-start').onclick=start; $('b-reset').onclick=reset;
+$('b-start').onclick=start; $('b-music').onclick=()=>{ musicOn=!musicOn; store.set('music',musicOn); musSync(); }; $('b-reset').onclick=reset;
 $('b-plus').onclick=()=>{ if(running){ endAt+=60000; } else { left+=60; } total=Math.max(total, running?(endAt-Date.now())/1000:left); beeped=false; paint(); };
 $('b-full').onclick=()=>{ const d=document.documentElement; if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); else if(d.requestFullscreen) d.requestFullscreen().catch(()=>{}); };
 // settings

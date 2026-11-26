@@ -229,7 +229,14 @@ function musStop(){
 function musSync(){ const now=running?(endAt-Date.now())/1000:left; if(musicOn && running && now>0) musStart(); else musStop(); const b=$('b-music'); if(b){ b.textContent='♪ Music: '+MUS_LV[musLv][0]; b.classList.toggle('on',musicOn); } }
 const START_HOOK='https://script.google.com/macros/s/AKfycbzhS5AKdryYVlui_vQQrgPIv_2Vndh90RXsalWlBBbHyPKyABupTiZBPpyk0gnz5evf/exec?action=start&key=clarity27';
 /* Test only, fresh start (not a resume after Pause): save the start time in the results sheet so "Time taken" fills in */
-function markTestStart(){ if(slot!=='test') return; try{ fetch(START_HOOK+'&t='+Date.now(),{mode:'no-cors',cache:'no-store'}).catch(()=>{ new Image().src=START_HOOK+'&t='+Date.now(); }); }catch(e){ try{ new Image().src=START_HOOK+'&t='+Date.now(); }catch(_){} } }
+function startBadge(txt,kind){ let b=document.getElementById('start-badge'); if(!b){ b=document.createElement('div'); b.id='start-badge'; b.style.cssText='position:fixed;left:16px;bottom:16px;z-index:99;padding:10px 14px;border-radius:10px;font:600 15px/1.3 system-ui,Arial,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.35);max-width:520px'; document.body.append(b); } b.textContent=txt; b.style.background=kind==='ok'?'#1E7F4F':kind==='bad'?'#B3261E':'#36507A'; b.style.color='#fff'; b.style.display='block'; clearTimeout(b._t); if(kind==='ok') b._t=setTimeout(()=>{ b.style.display='none'; },8000); }
+function markTestStart(){ if(slot!=='test') return; let tries=0, done=false;
+  const attempt=()=>{ tries++; const cb='__startSaved'+Date.now(); const s=document.createElement('script'); let timer;
+    window[cb]=r=>{ clearTimeout(timer); done=true; delete window[cb]; s.remove(); if(r==='ok') startBadge('✓ Start time saved. "Time taken" will show in the Result.','ok'); else startBadge('⚠ Start time not saved. Type the start time in the Leaderboard tab, cell K2.','bad'); };
+    const fail=()=>{ if(done) return; delete window[cb]; s.remove(); if(tries<4){ startBadge('Saving start time… (try '+(tries+1)+')','wait'); setTimeout(attempt,1500); } else startBadge('⚠ Start time not saved (no internet?). Type the start time in the Leaderboard tab, cell K2.','bad'); };
+    timer=setTimeout(fail,8000); s.onerror=()=>{ clearTimeout(timer); fail(); };
+    s.src=START_HOOK+'&callback='+cb+'&t='+Date.now(); document.head.append(s); };
+  startBadge('Saving start time…','wait'); attempt(); }
 function start(){ if(!running && left>=total) markTestStart(); if(running){ left=(endAt-Date.now())/1000; running=false; clearInterval(tick); } else { try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} endAt=Date.now()+left*1000; running=true; beeped=left<=0; clearInterval(tick); tick=setInterval(paint,250); } paint(); }
 function reset(){ running=false; clearInterval(tick); left=total; beeped=false; paint(); }
 function setMin(n){ total=n*60; store.set('min',n); reset(); }

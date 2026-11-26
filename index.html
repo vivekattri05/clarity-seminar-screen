@@ -68,6 +68,11 @@ button:hover{background:rgba(255,255,255,.12)}
 .resbtn{display:inline-flex;align-items:center;padding:8px 14px;border-radius:10px;background:var(--pink);color:#fff;font:600 14px/1 var(--f-body);text-decoration:none;border:1px solid var(--pink)}.resbtn:hover{filter:brightness(1.1)}
 button.on{background:var(--blue);border-color:var(--blue)}
 button.go{background:linear-gradient(90deg,var(--blue),var(--cyan));border-color:transparent}
+/* Start: the one button the host must find fast (style only, same id and click handler) */
+#b-start{background:linear-gradient(90deg,#E6238A,#FF6FB5);color:#fff;border:2px solid #fff;font-size:19px;font-weight:800;padding:12px 30px;min-width:150px;letter-spacing:.5px;box-shadow:0 0 0 4px rgba(230,35,138,.35),0 6px 20px rgba(230,35,138,.45);animation:startPulse 1.6s ease-in-out infinite}
+#b-start:hover{filter:brightness(1.08)}
+@keyframes startPulse{0%,100%{box-shadow:0 0 0 4px rgba(230,35,138,.35),0 6px 20px rgba(230,35,138,.45)}50%{box-shadow:0 0 0 10px rgba(230,35,138,.12),0 6px 26px rgba(230,35,138,.6)}}
+@media (prefers-reduced-motion:reduce){#b-start{animation:none}}
 button:focus-visible,input:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
 [hidden]{display:none!important}
 /* settings */

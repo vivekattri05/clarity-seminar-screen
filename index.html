@@ -227,7 +227,10 @@ function musStop(){
   try{ const t=actx.currentTime; m.master.gain.cancelScheduledValues(t); m.master.gain.setValueAtTime(Math.max(m.master.gain.value,0.0001),t); m.master.gain.exponentialRampToValueAtTime(0.0001,t+1.2); setTimeout(()=>{ try{m.master.disconnect();}catch(e){} },1500); }catch(e){}
 }
 function musSync(){ const now=running?(endAt-Date.now())/1000:left; if(musicOn && running && now>0) musStart(); else musStop(); const b=$('b-music'); if(b){ b.textContent='♪ Music: '+MUS_LV[musLv][0]; b.classList.toggle('on',musicOn); } }
-function start(){ if(running){ left=(endAt-Date.now())/1000; running=false; clearInterval(tick); } else { try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} endAt=Date.now()+left*1000; running=true; beeped=left<=0; clearInterval(tick); tick=setInterval(paint,250); } paint(); }
+const START_HOOK='https://script.google.com/macros/s/AKfycbzhS5AKdryYVlui_vQQrgPIv_2Vndh90RXsalWlBBbHyPKyABupTiZBPpyk0gnz5evf/exec?action=start&key=clarity27';
+/* Test only, fresh start (not a resume after Pause): save the start time in the results sheet so "Time taken" fills in */
+function markTestStart(){ if(slot!=='test') return; try{ fetch(START_HOOK+'&t='+Date.now(),{mode:'no-cors',cache:'no-store'}).catch(()=>{ new Image().src=START_HOOK+'&t='+Date.now(); }); }catch(e){ try{ new Image().src=START_HOOK+'&t='+Date.now(); }catch(_){} } }
+function start(){ if(!running && left>=total) markTestStart(); if(running){ left=(endAt-Date.now())/1000; running=false; clearInterval(tick); } else { try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} endAt=Date.now()+left*1000; running=true; beeped=left<=0; clearInterval(tick); tick=setInterval(paint,250); } paint(); }
 function reset(){ running=false; clearInterval(tick); left=total; beeped=false; paint(); }
 function setMin(n){ total=n*60; store.set('min',n); reset(); }
 
